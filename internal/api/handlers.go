@@ -4,8 +4,12 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"go-banner-rag/config"
 	"go-banner-rag/internal/azure"
@@ -117,12 +121,15 @@ func (h *Handler) Ask(c *gin.Context) {
 // ─── Ingestion ────────────────────────────────────────────────────────────────
 
 type ingestRequest struct {
-	DocsPath  string `json:"docs_path"`
-	Overwrite bool   `json:"overwrite"`
+	DocsPath      string `json:"docs_path"`
+	Overwrite     bool   `json:"overwrite"`
+	PagesPerBatch int    `json:"pages_per_batch"`
+	StartPage     int    `json:"start_page"`
+	EndPage       int    `json:"end_page"`
 }
 
 // Ingest godoc
-// @Summary Ingest Banner documents from local folder
+// @Summary Ingest Banner documents from a local folder
 // @Tags Ingestion
 // @Router /ingest [post]
 func (h *Handler) Ingest(c *gin.Context) {
@@ -132,9 +139,10 @@ func (h *Handler) Ingest(c *gin.Context) {
 		req.DocsPath = "data/docs"
 	}
 
-	log.Printf("Ingesting from %s (overwrite=%v)", req.DocsPath, req.Overwrite)
+	log.Printf("Ingesting from %s (overwrite=%v, pages_per_batch=%d, start_page=%d, end_page=%d)",
+		req.DocsPath, req.Overwrite, req.PagesPerBatch, req.StartPage, req.EndPage)
 
-	result, err := ingest.Run(h.cfg, req.DocsPath, req.Overwrite)
+	result, err := ingest.Run(h.cfg, req.DocsPath, req.Overwrite, req.PagesPerBatch, req.StartPage, req.EndPage)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -224,7 +232,7 @@ func (h *Handler) BlobSync(c *gin.Context) {
 
 	// Optionally ingest right after download
 	if req.IngestAfterSync && len(downloaded) > 0 {
-		result, err := ingest.Run(h.cfg, "data/docs", req.Overwrite)
+		result, err := ingest.Run(h.cfg, "data/docs", req.Overwrite, 5, 0, 0)
 		if err != nil {
 			response["ingestion_error"] = err.Error()
 		} else {
@@ -249,4 +257,27 @@ func (h *Handler) CreateIndex(c *gin.Context) {
 		"status":     "created",
 		"index_name": h.cfg.AzureSearchIndexName,
 	})
+}
+
+func (h *Handler) ListChunks(c *gin.Context) {
+	url := fmt.Sprintf(
+		"%s/indexes/%s/docs?api-version=2024-03-01-Preview&search=*&$top=50&$select=id,filename,page_number,banner_module,banner_version",
+		strings.TrimRight(h.cfg.AzureSearchEndpoint, "/"),
+		h.cfg.AzureSearchIndexName,
+	)
+
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("api-key", h.cfg.AzureSearchAPIKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	var result any
+	json.NewDecoder(resp.Body).Decode(&result)
+	c.JSON(http.StatusOK, result)
 }
