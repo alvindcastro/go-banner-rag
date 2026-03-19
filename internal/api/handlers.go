@@ -4,6 +4,7 @@
 package api
 
 import (
+	"io"
 	"log"
 	"net/http"
 
@@ -125,7 +126,10 @@ type ingestRequest struct {
 // @Router /ingest [post]
 func (h *Handler) Ingest(c *gin.Context) {
 	var req ingestRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	if req.DocsPath == "" {
 		req.DocsPath = "data/docs"
 	}
@@ -190,7 +194,10 @@ func (h *Handler) BlobSync(c *gin.Context) {
 	}
 
 	var req blobSyncRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Defaults
 	if req.ContainerName == "" {

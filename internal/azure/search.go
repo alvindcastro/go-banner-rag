@@ -87,7 +87,10 @@ func (c *SearchClient) CreateIndex() error {
 		},
 	}
 
-	payload, _ := json.Marshal(indexDef)
+	payload, err := json.Marshal(indexDef)
+	if err != nil {
+		return fmt.Errorf("marshal index def: %w", err)
+	}
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(payload))
 	if err != nil {
 		return err
@@ -116,7 +119,10 @@ func (c *SearchClient) GetDocumentCount() (int64, error) {
 		c.cfg.AzureSearchIndexName,
 	)
 
-	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create request: %w", err)
+	}
 	req.Header.Set("api-key", c.cfg.AzureSearchAPIKey)
 
 	resp, err := c.httpClient.Do(req)
@@ -125,7 +131,10 @@ func (c *SearchClient) GetDocumentCount() (int64, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("read response: %w", err)
+	}
 	var count int64
 	if err := json.Unmarshal(body, &count); err != nil {
 		return 0, fmt.Errorf("parse count: %w", err)
@@ -165,9 +174,15 @@ func (c *SearchClient) UploadDocuments(docs []ChunkDocument) error {
 	}
 
 	body := map[string]any{"value": actions}
-	payload, _ := json.Marshal(body)
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal upload docs: %w", err)
+	}
 
-	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("api-key", c.cfg.AzureSearchAPIKey)
 
@@ -237,8 +252,14 @@ func (c *SearchClient) HybridSearch(
 		searchBody["filter"] = strings.Join(filters, " and ")
 	}
 
-	payload, _ := json.Marshal(searchBody)
-	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	payload, err := json.Marshal(searchBody)
+	if err != nil {
+		return nil, fmt.Errorf("marshal search body: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("api-key", c.cfg.AzureSearchAPIKey)
 
@@ -248,7 +269,10 @@ func (c *SearchClient) HybridSearch(
 	}
 	defer resp.Body.Close()
 
-	respBytes, _ := io.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read search response: %w", err)
+	}
 	if resp.StatusCode >= 400 {
 		return nil, fmt.Errorf("search HTTP %d: %s", resp.StatusCode, string(respBytes))
 	}
