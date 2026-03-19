@@ -267,6 +267,7 @@ func extractTextFile(filePath string) ([]pageContent, error) {
 // chunkText splits text into overlapping character-based chunks,
 // trying to break on paragraph or sentence boundaries.
 func chunkText(text string, chunkSize, overlap int) []string {
+	text = strings.TrimSpace(text)
 	if len(text) <= chunkSize {
 		return []string{text}
 	}
@@ -278,38 +279,32 @@ func chunkText(text string, chunkSize, overlap int) []string {
 		end := start + chunkSize
 		if end >= len(text) {
 			chunk := strings.TrimSpace(text[start:])
-			if chunk != "" {
+			if len(chunk) > 50 { // skip tiny trailing chunks
 				chunks = append(chunks, chunk)
 			}
 			break
 		}
 
-		// Try to find a clean break point
-		breakAt := -1
-		for _, sep := range []string{"\n\n", "\n", ". ", " "} {
+		// Try to find a clean break point working backwards from end
+		breakAt := end
+		for _, sep := range []string{"\n\n", "\n", ". ", "? ", "! ", ", ", " "} {
 			pos := strings.LastIndex(text[start:end], sep)
-			if pos > 0 {
+			if pos > chunkSize/2 { // break must be in second half of chunk
 				breakAt = start + pos + len(sep)
 				break
 			}
 		}
 
-		// If no break point found use hard cut
-		if breakAt <= start {
-			breakAt = end
-		}
-
 		chunk := strings.TrimSpace(text[start:breakAt])
-		if chunk != "" {
+		if len(chunk) > 50 { // skip tiny chunks
 			chunks = append(chunks, chunk)
 		}
 
-		// Advance start — guarantee forward progress
-		next := breakAt - overlap
-		if next <= start {
-			next = start + 1 // always move forward
+		// Move forward by chunkSize minus overlap
+		start = breakAt - overlap
+		if start <= 0 {
+			start = breakAt // no overlap at beginning
 		}
-		start = next
 	}
 
 	return chunks

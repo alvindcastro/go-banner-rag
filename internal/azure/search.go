@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -36,6 +37,28 @@ func NewSearchClient(cfg *config.Config) *SearchClient {
 // CreateIndex creates the banner-upgrade-knowledge index in Azure AI Search.
 // Safe to call multiple times — uses PUT (create or update).
 func (c *SearchClient) CreateIndex() error {
+	// Step 1 — Delete existing index if it exists
+	deleteURL := fmt.Sprintf(
+		"%s/indexes/%s?api-version=2024-03-01-Preview",
+		strings.TrimRight(c.cfg.AzureSearchEndpoint, "/"),
+		c.cfg.AzureSearchIndexName,
+	)
+
+	deleteReq, _ := http.NewRequest(http.MethodDelete, deleteURL, nil)
+	deleteReq.Header.Set("api-key", c.cfg.AzureSearchAPIKey)
+
+	deleteResp, err := c.httpClient.Do(deleteReq)
+	if err != nil {
+		return fmt.Errorf("delete index http: %w", err)
+	}
+	deleteResp.Body.Close()
+	// 404 is fine — index didn't exist yet
+	log.Printf("Delete index status: %d", deleteResp.StatusCode)
+
+	// Step 2 — Wait a moment for deletion to propagate
+	time.Sleep(2 * time.Second)
+
+	// Step 3 — Create fresh index
 	url := fmt.Sprintf(
 		"%s/indexes/%s?api-version=2024-03-01-Preview",
 		strings.TrimRight(c.cfg.AzureSearchEndpoint, "/"),
