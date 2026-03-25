@@ -155,4 +155,4 @@ And receive a grounded, cited answer in under three seconds.
 
 The ingestion pipeline handles the tedium. The hybrid search handles the retrieval. The prompt keeps the model honest. Each piece does one thing well.
 
-**[Continue to Part 3: The Summarizer, Tooling, and What Comes Next →](/posts/part-3-shipping-and-future/)**
+**[Continue to Part 3: The Summarizer, Tooling, and What Comes Next →](../part-3-shipping-and-future/)**

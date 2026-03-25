@@ -109,4 +109,4 @@ Roughly 2,000 lines of Go. Four direct dependencies.
 
 With the architecture clear and the stack chosen, the next step was actually building it — and PDF parsing in Go is not glamorous.
 
-**[Continue to Part 2: Building the Foundation →](/posts/part-2-building-it/)**
+**[Continue to Part 2: Building the Foundation →](../part-2-building-it/)**
