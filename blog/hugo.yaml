@@ -44,12 +44,10 @@ params:
     text: "go-banner-rag"
 
   homeInfoParams:
-    Title: "Building a Banner Upgrade Assistant with Go and Azure"
+    Title: "We stopped reading Banner release notes."
     Content: >
-      A practical RAG service that answers natural-language questions about
-      Ellucian Banner ERP upgrades — built in Go on top of Azure OpenAI and
-      Azure AI Search. No frameworks, no hidden magic. Just an explicit,
-      grounded pipeline from PDF to answer.
+      Ask your Banner upgrade docs a question. Get a cited answer in under three seconds.
+      Built in Go on top of Azure OpenAI and Azure AI Search — no frameworks, no hallucinations.
 
   socialIcons:
     - name: github
